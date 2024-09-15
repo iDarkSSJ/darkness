@@ -1,0 +1,67 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "standard": "^17.1.0"
+  },
+  "dependencies": {
+    "adm-zip": "0.5.16",
+    "bcrypt": "^5.1.1",
+    "cloudinary": "2.4.0",
+    "cookie-parser": "1.4.6",
+    "cors": "2.8.5",
+    "dotenv": "16.4.5",
+    "express": "4.19.2",
+    "jsonwebtoken": "9.0.2",
+    "morgan": "1.10.0",
+    "multer": "1.4.5-lts.1",
+    "passport": "0.7.0",
+    "passport-google-oauth20": "2.0.0",
+    "pg": "8.12.0",
+    "ua-parser-js": "1.0.38",
+    "zod": "3.23.8"
+  },
+  "eslintConfig": {
+    "extends": [
+      "standard",
+      "prettier"
+    ],
+    "rules": {
+      "no-multi-spaces": "error",
+      "space-infix-ops": "error",
+      "no-unused-vars": "error",
+      "eqeqeq": [
+        "error",
+        "always"
+      ],
+      "no-undef": "error",
+      "arrow-spacing": [
+        "error",
+        {
+          "before": true,
+          "after": true
+        }
+      ],
+      "no-var": "error",
+      "quotes": [
+        "error",
+        "single"
+      ],
+      "semi": [
+        "error",
+        "never"
+      ],
+      "camelcase": "off"
+    }
+  }
+}
