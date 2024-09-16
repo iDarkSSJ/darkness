@@ -26,28 +26,28 @@ export type RomExtension = typeof ACCEPTED_ROM_EXTENSIONS[number]
 export type CoverExtension = typeof ACCEPTED_COVER_EXTENSIONS[number]
 
 export interface LoginUserType {
-  user: string,
-  user_password: string,
+  user: string
+  user_password: string
 }
 
 export interface RegisterUserType {
-  user_name: string,
-  user_email: string,
-  user_password: string,
+  user_name: string
+  user_email: string
+  user_password: string
 }
 
 export interface ProfileType {
-  user_name: string,
-  user_email: string,
-  password_pending: boolean,
-  is_google_user: boolean,
+  user_name: string
+  user_email: string
+  password_pending: boolean
+  is_google_user: boolean
   created_at: number
 }
 
 export interface SessionType {
-  session_id: string,
-  device: string,
-  created_at: number,
+  session_id: string
+  device: string
+  created_at: number
   last_updated_at: number
 }
 
@@ -60,25 +60,36 @@ export interface APIError extends Error {
 }
 
 export interface ShellType {
-  shell_id: string,
-  shell_name: string,
-  shell_core: string,
-  shell_rom_url: string,
-  shell_cover_url?: string,
-  created_at: number,
+  shell_id: string
+  shell_name: string
+  shell_core: string
+  shell_rom_url: string
+  shell_cover_url?: string
+  created_at: number
 }
 
 export interface StateType {
-  state_id: string,
-  shell_id: string,
-  slot_number: number,
-  state_url: string,
-  saved_at: number,
+  state_id: string
+  shell_id: string
+  slot_number: number
+  state_url: string
+  saved_at: number
 }
 
 export enum StateFunctionType {
   LOAD = "LOAD",
   SAVE = "SAVE",
 }
+
+
+export interface ShellData {
+  shell_name: string
+  shell_core: string
+  shell_rom_url: string
+  shell_rom_public_id: string
+  shell_cover_url?: string
+  shell_cover_public_id?: string
+}
+
 
 

@@ -36,6 +36,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
       if (response.status === 200) {
         setIsAuth(true)
         setErrors(null)
+        window.location.reload()
       } else {
         setErrors("Login failed")
       }
@@ -50,6 +51,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
       const response = await registerRequest(user)
       if (response.status === 200) {
         setIsAuth(true)
+        window.location.reload()
         setErrors(null)
       } else {
         setErrors("Registration failed")

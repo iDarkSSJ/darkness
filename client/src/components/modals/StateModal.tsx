@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom"
 import Loader from "../icons/Loader"
 import StateSlot from "../StateSlot"
 import { useStates } from "../../context/useStates"
-import Xicon from "../icons/X"
+import { Xicon } from "../icons/Icons"
 
 function StateModal({
   stateFunction,
@@ -14,7 +14,7 @@ function StateModal({
 }) {
   const { states } = useStates()
 
-  const { shell_id = '' } = useParams()
+  const { shell_id = "" } = useParams()
 
   const totalSlots = 6
   const slots = Array.from({ length: totalSlots }, (_, index) => index + 1)

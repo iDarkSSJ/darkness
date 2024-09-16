@@ -1,37 +1,43 @@
 import { Router } from 'express'
-import { UserController } from '../controllers/userController.js'
 import passport from 'passport'
-import { authRequired } from '../middlewares/validateToken.js'
+import { UserController } from '../controllers/userController.js'
 import { SessionController } from '../controllers/sessionController.js'
+import { addAuthMiddleware } from '../middlewares/validateToken.js'
 
-const authRouter = Router()
+export const addAuthRouter = ({ userModel, sessionModel, googleIdModel }) => {
+  const authRouter = Router()
 
-authRouter.post('/register', UserController.register)
-authRouter.post('/login', UserController.login)
-authRouter.post('/logout', UserController.logout)
-authRouter.get('/verify', UserController.verify)
-authRouter.get('/profile', authRequired, UserController.profile)
+  const userCll = new UserController({ userModel, sessionModel, googleIdModel })
+  const sessionCll = new SessionController({ sessionModel })
+  const authMiddleware = addAuthMiddleware({ sessionModel })
 
-authRouter.get('/sessions', authRequired, SessionController.getAllSessions)
-authRouter.delete('/sessions/:session_id', authRequired, SessionController.removeSession)
-authRouter.delete('/sessions', authRequired, SessionController.clearSessions)
+  authRouter.post('/register', userCll.register)
+  authRouter.post('/login', userCll.login)
+  authRouter.post('/logout', userCll.logout)
+  authRouter.get('/verify', userCll.verify)
+  authRouter.get('/profile', authMiddleware, userCll.profile)
 
-// -----------💎GOOGLE---------------
+  authRouter.get('/sessions', authMiddleware, sessionCll.getAllSessions)
+  authRouter.delete('/sessions/:session_id', authMiddleware, sessionCll.removeSession)
+  authRouter.delete('/sessions', authMiddleware, sessionCll.clearSessions)
 
-authRouter.get('/google/login', passport.authenticate('google-login', { session: false }))
-authRouter.get(
-  '/google/callback',
-  passport.authenticate('google-login', { session: false }),
-  UserController.googleLogin
-)
+  // -----------💎GOOGLE---------------
 
-authRouter.get('/google/register', passport.authenticate('google-register', { session: false }))
-authRouter.get(
-  '/google/register/callback',
-  passport.authenticate('google-register', { session: false }),
-  UserController.googleRegister
-)
+  authRouter.get('/google/login', passport.authenticate('google-login', { session: false }))
+  authRouter.get(
+    '/google/callback',
+    passport.authenticate('google-login', { session: false }),
+    userCll.googleLogin
+  )
 
-authRouter.post('/google/auth/:temp_id', UserController.googleVerify)
+  authRouter.get('/google/register', passport.authenticate('google-register', { session: false }))
+  authRouter.get(
+    '/google/register/callback',
+    passport.authenticate('google-register', { session: false }),
+    userCll.googleRegister
+  )
 
-export default authRouter
+  authRouter.post('/google/auth/:temp_id', userCll.googleVerify)
+
+  return authRouter
+}

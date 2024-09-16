@@ -1,7 +1,4 @@
-# Project - Environment Variables
-
-
-## Environment Variables
+# Environment Variables
 
 ### Database
 
@@ -13,8 +10,8 @@
 
 ### Google Credentials
 
-- `GOOGLE_CLIENT_ID`: Google client ID.
-- `GOOGLE_CLIENT_SECRET`: Google client secret.
+- `GOOGLE_CLIENT_ID`: Google OAuth client ID.
+- `GOOGLE_CLIENT_SECRET`: Google OAuth client secret.
 
 ### Cloudinary Credentials
 
@@ -29,8 +26,15 @@
 ### Google Callback URLs
 
 - `GOOGLE_LOGIN_CALLBACK`: Callback URL for Google login.
+
 - `GOOGLE_REGISTER_CALLBACK`: Callback URL for Google registration.
 
 ### Node Environment
 
-- `NODE_ENV`: App Environment.
+- `NODE_ENV`: App environment (e.g., `development`, `production`).
+
+### Supabase
+
+- `SUPABASE_URL`: URL for connecting to Supabase.
+
+- `SUPABASE_ANON_KEY`: Supabase anon key.

@@ -1,12 +1,14 @@
-import { SessionModel } from '../models/postgreRender/sessions.js'
-
 export class SessionController {
-  static async getAllSessions(req, res) {
+  constructor({ sessionModel }) {
+    this.sessionModel = sessionModel
+  }
+
+  getAllSessions = async (req, res) => {
     const { user_id } = req.user
     if (!user_id) return res.status(400).send('User not found')
 
     try {
-      const sessionsFound = await SessionModel.getSessionsByUser({ user_id })
+      const sessionsFound = await this.sessionModel.getSessionsByUser({ user_id })
       if (sessionsFound.error) return res.status(500).send('Internal Server Error')
       if (!sessionsFound.sessions) return res.status(404).send('No sessions found')
       return res.json(sessionsFound.sessions)
@@ -16,17 +18,18 @@ export class SessionController {
     }
   }
 
-  static async removeSession(req, res) {
+  removeSession = async (req, res) => {
     const { session_id } = req.params
     const { user_id } = req.user
 
     if (!session_id || !user_id) return res.status(400).send('Missing session or user id')
 
     try {
-      const result = await SessionModel.deleteSessionById({
+      const result = await this.sessionModel.deleteSessionById({
         session_id,
         user_id,
       })
+
       if (result.error) {
         return res.status(500).send('Error deleting session')
       }
@@ -38,12 +41,12 @@ export class SessionController {
     }
   }
 
-  static async clearSessions(req, res) {
+  clearSessions = async (req, res) => {
     const { user_id } = req.user
     if (!user_id) return res.status(400).send('User not found')
 
     try {
-      const result = await SessionModel.deleteSessionsByUser({ user_id })
+      const result = await this.sessionModel.deleteSessionsByUser({ user_id })
       if (result.error) {
         return res.status(500).send('Error deleting all sessions')
       }

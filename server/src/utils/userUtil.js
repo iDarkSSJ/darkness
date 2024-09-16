@@ -1,5 +1,4 @@
 import { UAParser } from 'ua-parser-js'
-import { SessionModel } from '../models/postgreRender/sessions.js'
 
 export function createUser({
   user_name,
@@ -57,14 +56,14 @@ export const generateUsername = (displayName, userGoogleId) => {
   return finalUsername.slice(0, 15)
 }
 
-export const registerUserSession = async ({ token, user, req }) => {
+export const registerUserSession = async ({ token, user, req, sessionModel }) => {
   try {
     const userAgent = req.headers['user-agent'] || 'Unknown User-Agent'
     const uaParser = new UAParser(userAgent)
 
     const device = uaParser.getOS().name
 
-    const session = await SessionModel.registerSession({
+    const session = await sessionModel.registerSession({
       token,
       user,
       device,

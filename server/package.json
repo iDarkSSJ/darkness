@@ -4,8 +4,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "node --watch index.js",
-    "start": "node index.js"
+    "dev": "node --watch server-w-supabase.js",
+    "start:render": "node --watch server-w-render.js",
+    "start:supabase": "node --watch server-w-supabase.js",
+    "start": "node --watch server-w-supabase.js"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +17,7 @@
     "standard": "^17.1.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "adm-zip": "0.5.16",
     "bcrypt": "^5.1.1",
     "cloudinary": "2.4.0",

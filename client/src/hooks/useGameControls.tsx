@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { ShellType, StateFunctionType, StateType } from "../types/types.d"
 import { unZipFile } from "../utils/utils"
 import { autoSaveReq, getAutoSave } from "../api/states"
-import { useParams } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
 
 const useGameControls = (
   gameInstance: React.MutableRefObject<Nostalgist | null>,
@@ -16,6 +16,7 @@ const useGameControls = (
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const { shell_id = "" } = useParams()
+  const location = useLocation()
   const [autoSaveLoad, setAutoSaveLoad] = useState(0)
   const [autoSaveTime, setAutoSaveTime] = useState<number>(0)
 
@@ -41,7 +42,7 @@ const useGameControls = (
   }, [shell_id, gameInstance])
 
   useEffect(() => {
-    let timerId: number | undefined
+    let timerId: ReturnType<typeof setInterval> | undefined
     if (gameInstance.current && isPlaying && !isPaused) {
       timerId = setInterval(() => {
         setAutoSaveTime((prevTime) => {
@@ -95,6 +96,14 @@ const useGameControls = (
       window.removeEventListener("beforeunload", handleUnload)
     }
   }, [gameInstance])
+
+  useEffect(() => {
+    return () => {
+      if (gameInstance.current) {
+        window.location.reload()
+      }
+    }
+  }, [location, gameInstance])
 
   // loadGame
   useEffect(() => {

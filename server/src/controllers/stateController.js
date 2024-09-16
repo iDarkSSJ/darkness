@@ -1,16 +1,19 @@
 import { deleteRawFromCloud, uploadToCloud } from '../config/cloudinaryConfig.js'
-import { StateModel } from '../models/postgreRender/stateModel.js'
 import { uploadStateToCloud } from '../utils/utils.js'
 
 export class StateController {
-  static async getStatesByShell(req, res) {
+  constructor({ stateModel }) {
+    this.stateModel = stateModel
+  }
+
+  getStatesByShell = async (req, res) => {
     const { shell_id } = req.params
     const { user_id } = req.user
 
     if (!shell_id || !user_id) return res.status(400).send('Missing shell or user id')
 
     try {
-      const states = await StateModel.getStatesById({ shell_id, user_id })
+      const states = await this.stateModel.getStatesById({ shell_id, user_id })
       if (states.error) {
         return res.status(500).send('Failed to get states')
       }
@@ -21,7 +24,7 @@ export class StateController {
     }
   }
 
-  static async createState(req, res) {
+  createState = async (req, res) => {
     try {
       const { shell_id } = req.params
       const { slot_number } = req.body
@@ -33,7 +36,7 @@ export class StateController {
       }
       const stateBuffer = stateFile.buffer
 
-      const stateExists = await StateModel.getStateBySlot({ shell_id, slot_number, user_id })
+      const stateExists = await this.stateModel.getStateBySlot({ shell_id, slot_number, user_id })
       if (stateExists.error) {
         console.error('Error fetching state')
         return res.status(500).send('Failed to fetch state.')
@@ -48,7 +51,7 @@ export class StateController {
           ...newStateReq,
         }
 
-        const updatedState = await StateModel.updateState({
+        const updatedState = await this.stateModel.updateState({
           shell_id,
           state_id: stateExists.state.state_id,
           state: newState,
@@ -67,7 +70,7 @@ export class StateController {
           ...stateData,
         }
 
-        const newState = await StateModel.createState({ shell_id, state: stateSchema })
+        const newState = await this.stateModel.createState({ shell_id, state: stateSchema })
 
         if (newState.error) {
           await deleteRawFromCloud(stateData.state_public_id)
@@ -82,20 +85,20 @@ export class StateController {
     }
   }
 
-  static async deleteState(req, res) {
+  deleteState = async (req, res) => {
     const { shell_id, state_id } = req.params
     const { user_id } = req.user
     if (!shell_id || !state_id) return res.status(400).send('Missing shell or user id')
 
     try {
-      const stateFound = await StateModel.getStateById({ shell_id, state_id, user_id })
+      const stateFound = await this.stateModel.getStateById({ shell_id, state_id, user_id })
       if (stateFound.error) {
         return res.status(500).send('Failed to fetch state')
       }
 
       const { state_public_id } = stateFound.state
       await deleteRawFromCloud(state_public_id)
-      const deleteState = await StateModel.deleteState({ shell_id, state_id, user_id })
+      const deleteState = await this.stateModel.deleteState({ shell_id, state_id, user_id })
       if (deleteState.error) {
         return res.status(500).send('Failed to delete state')
       }
@@ -106,14 +109,14 @@ export class StateController {
     }
   }
 
-  static async updateState(req, res) {
+  updateState = async (req, res) => {
     const { shell_id, state_id } = req.params
     const { user_id } = req.user
     const { state, slot_number } = req.body
     if (!shell_id || !state_id || !state) return res.status(400).send('Missing shell or state')
 
     try {
-      const stateFound = await StateModel.getStateById({ shell_id, state_id, user_id })
+      const stateFound = await this.stateModel.getStateById({ shell_id, state_id, user_id })
       if (stateFound.error) {
         return res.status(500).send('Failed to fetch state')
       }
@@ -128,7 +131,7 @@ export class StateController {
         state_public_id: updatedStateUploadResult.public_id,
         state_url: updatedStateUploadResult.secure_url,
       }
-      const updatedState = await StateModel.updateState({
+      const updatedState = await this.stateModel.updateState({
         shell_id,
         state_id,
         updatedState: updatedStateSchema,
@@ -144,21 +147,20 @@ export class StateController {
     }
   }
 
-  static async getStateBySlotNumber(req, res) {
+  getStateBySlotNumber = async (req, res) => {
     const { shell_id, slot_number } = req.params
     const { user_id } = req.user
 
     if (!shell_id || !slot_number) return res.status(400).send('Missing shell or slot number')
-      try {
-        const state = await StateModel.getStateBySlot({ shell_id, slot_number, user_id })
-        if (state.error) {
-          return res.status(500).send('Failed to get state')
-        }
-        return res.json(state.state)
-      } catch (err) {
-        console.error(err)
+    try {
+      const state = await this.stateModel.getStateBySlot({ shell_id, slot_number, user_id })
+      if (state.error) {
         return res.status(500).send('Failed to get state')
       }
-  
+      return res.json(state.state)
+    } catch (err) {
+      console.error(err)
+      return res.status(500).send('Failed to get state')
+    }
   }
 }

@@ -18,7 +18,7 @@ function GoogleVerify() {
         }
       } catch (err) {
         setIsLoading(false)
-        window.location.href = "/login?error=Not Valid Token"
+        window.location.href = "/login?error=Error validating account"
       }
     }
 

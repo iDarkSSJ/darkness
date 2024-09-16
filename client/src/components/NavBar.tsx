@@ -25,7 +25,9 @@ function NavBar() {
       <nav>
         <ul>
           <div>
-            <h1>Dark<strong>nes</strong>s</h1>
+            <h1>
+              Dark<strong>nes</strong>s
+            </h1>
           </div>
           <li>
             <NavLink
@@ -35,13 +37,21 @@ function NavBar() {
               Shells
             </NavLink>
           </li>
+          <li>
+            <NavLink
+              onClick={handleOnNavClick}
+              className={({ isActive }) => (isActive ? "active" : "")}
+              to={"/inputs"}>
+              Inputs
+            </NavLink>
+          </li>
         </ul>
         <div>
           <div>
             <button onClick={handleClick("/shells/new")}>New</button>
           </div>
           <div>
-            <button onClick={handleClick('/profile')}>
+            <button onClick={handleClick("/profile")}>
               {profile?.user_name}
             </button>
           </div>

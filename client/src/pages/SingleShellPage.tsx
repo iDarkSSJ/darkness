@@ -3,17 +3,21 @@ import { useAuth } from "../context/useAuth"
 import { getSingleShellRequest } from "../api/shells"
 import { useNavigate, useParams } from "react-router-dom"
 import { ShellType } from "../types/types.d"
-import Play from "../components/icons/Play"
-import Pause from "../components/icons/Pause"
-import Camera from "../components/icons/Camera"
 import StateModal from "../components/modals/StateModal"
 import StateProvider from "../context/StateContext"
 import useGame from "../context/useGame"
 import useGameControls from "../hooks/useGameControls"
-import ProgressLoad from "../components/svg/ProgressLoad"
-import CloudDone from "../components/svg/CloudDone"
-import ErrorIcon from "../components/svg/ErrorIcon"
 import { formatCountdown } from "../utils/FormatCountdown"
+import {
+  Camera,
+  CloudDone,
+  Delete,
+  Edit,
+  ErrorIcon,
+  Pause,
+  Play,
+  ProgressLoad,
+} from "../components/icons/Icons"
 
 function SingleShellPage() {
   const [shell, setShell] = useState<ShellType | null>(null)
@@ -55,6 +59,13 @@ function SingleShellPage() {
     getShell()
   }, [profile, navigate, shell_id])
 
+  const handleClick = (href: string) => () => {
+    if (gameInstance.current) {
+      gameInstance.current.exit()
+    }
+    navigate(href)
+  }
+
   return (
     <>
       <div className="shellCoverBg">
@@ -86,15 +97,28 @@ function SingleShellPage() {
             <div className="shellHeader">
               <h2>{shell?.shell_name}</h2>
               <div>
-                {isPlaying && formatCountdown(autoSaveTime)}
-                {isPlaying &&
-                  (autoSaveLoad === 0 ? (
-                    <CloudDone />
-                  ) : autoSaveLoad === 1 ? (
-                    <ProgressLoad />
-                  ) : (
-                    <ErrorIcon />
-                  ))}
+                {isPlaying && (
+                  <div className="autosaveInfo">
+                    {formatCountdown(autoSaveTime)}
+                    {autoSaveLoad === 0 ? (
+                      <CloudDone />
+                    ) : autoSaveLoad === 1 ? (
+                      <ProgressLoad />
+                    ) : (
+                      <ErrorIcon />
+                    )}
+                  </div>
+                )}
+                {!isPlaying && (
+                  <div className="shellOptions">
+                    <button onClick={handleClick(`/shells/edit/${shell_id}`)}>
+                      <Edit />
+                    </button>
+                    <button onClick={handleClick(`/shells/remove/${shell_id}`)}>
+                      <Delete />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="gameContainer">

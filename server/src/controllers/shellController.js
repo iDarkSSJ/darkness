@@ -1,16 +1,15 @@
 import bcrypt from 'bcrypt'
-import {
-  deleteImageFromCloud,
-  deleteRawFromCloud,
-  uploadToCloud,
-} from '../config/cloudinaryConfig.js'
-import { pool } from '../models/postgreRender/db.js'
-import { ShellModel } from '../models/postgreRender/shellModel.js'
-import { UserModel } from '../models/postgreRender/user.js'
+import { deleteImageFromCloud, deleteRawFromCloud } from '../config/cloudinaryConfig.js'
 import { validateShell } from '../schemas/shellSchema.js'
 
 export class ShellController {
-  static async createShell(req, res) {
+  constructor({ shellModel, userModel, stateModel }) {
+    this.shellModel = shellModel
+    this.userModel = userModel
+    this.stateModel = stateModel
+  }
+
+  createShell = async (req, res) => {
     const { user_id } = req.user
     const {
       shell_name,
@@ -20,6 +19,15 @@ export class ShellController {
       shell_cover_url,
       shell_cover_public_id,
     } = req.body
+
+    console.log({
+      shell_name,
+      shell_core,
+      shell_rom_url,
+      shell_rom_public_id,
+      shell_cover_url,
+      shell_cover_public_id,
+    })
 
     if (!shell_rom_url || !shell_rom_public_id) {
       return res.status(400).send({ error: 'Error fetching cover or rom.' })
@@ -47,7 +55,7 @@ export class ShellController {
         shell_cover_public_id: coverPublicId,
       }
 
-      const newShell = await ShellModel.createShell({
+      const newShell = await this.shellModel.createShell({
         user_id,
         shell: shellSchema,
       })
@@ -63,12 +71,12 @@ export class ShellController {
     }
   }
 
-  static async getShellsByUser(req, res) {
+  getShellsByUser = async (req, res) => {
     const { user_id } = req.user
     if (!user_id) return res.status(400).send({ error: 'User not found' })
 
     try {
-      const shells = await ShellModel.getShellsByUserId({ user_id })
+      const shells = await this.shellModel.getShellsByUserId({ user_id })
       if (shells.error)
         return res.status(500).send({ error: 'Internal Server Error, Please try again' })
       if (!shells.shells) return res.status(404).send({ error: 'No shells found' })
@@ -79,13 +87,13 @@ export class ShellController {
     }
   }
 
-  static async getShellById(req, res) {
+  getShellById = async (req, res) => {
     const { user_id } = req.user
     const { shell_id } = req.params
 
     if (!user_id || !shell_id) return res.status(400).send('Missing user or shell id')
     try {
-      const shell = await ShellModel.getShellById({ shell_id, user_id })
+      const shell = await this.shellModel.getShellById({ shell_id, user_id })
       if (shell.error) {
         return res.status(500).send('Failed to fetch shell')
       }
@@ -96,34 +104,27 @@ export class ShellController {
     }
   }
 
-  static async updateShell(req, res) {
+  updateShell = async (req, res) => {
     const { user_id } = req.user
     const { shell_id } = req.params
-    const { shell_name } = req.body
-    const { shell_cover } = req.files
+    const { shell_name, shell_cover_url, shell_cover_public_id } = req.body
 
     try {
-      const shellFound = await ShellModel.getShellById({ shell_id, user_id })
+      const shellFound = await this.shellModel.getShellById({ shell_id, user_id })
       if (shellFound.error) {
-        return res.status(500).send('Failed to fetch shell')
+        return res.status(500).send({ error: 'Failed to fetch shell' })
       }
-      if (!shellFound.shell) return res.status(404).send('Shell not found')
-
-      const { shell_cover_public_id } = shellFound.shell
-
-      let newCoverUrl = shellFound.shell.shell_cover_url
-      let newCoverPublicId = shell_cover_public_id
-
-      if (shell_cover) {
-        const coverFile = shell_cover[0]
-        if (shell_cover_public_id) {
-          await deleteImageFromCloud(shell_cover_public_id)
-        }
-        const coverUploadResponse = await uploadToCloud(coverFile.buffer, 'covers')
-
-        newCoverUrl = coverUploadResponse.secure_url
-        newCoverPublicId = coverUploadResponse.public_id
+      if (!shellFound.shell) {
+        return res.status(404).send({ error: 'Shell not found' })
       }
+
+      const { shell_cover_public_id: existingCoverPublicId } = shellFound.shell
+      if (existingCoverPublicId) {
+        await deleteImageFromCloud(existingCoverPublicId)
+      }
+
+      const newCoverUrl = shell_cover_url || shellFound.shell.shell_cover_url
+      const newCoverPublicId = shell_cover_public_id || existingCoverPublicId
 
       const shellSchema = {
         shell_id,
@@ -132,40 +133,51 @@ export class ShellController {
         shell_cover_public_id: newCoverPublicId,
       }
 
-      const updateShell = await ShellModel.updateShell({ user_id, shell: shellSchema })
+      const updateShell = await this.shellModel.updateShell({
+        user_id,
+        shell: shellSchema,
+      })
       if (updateShell.error) {
-        return res.status(500).send('Failed to update shell')
+        return res.status(500).send({ error: 'Failed to update shell' })
       }
 
-      return res.json(updateShell)
+      return res.json(updateShell.shell)
     } catch (err) {
       console.error('Error updating shell:', err)
-      return res.status(500).send('Internal Server Error, Please try again')
+      return res.status(500).send({ error: 'Internal Server Error, Please try again' })
     }
   }
 
-  static async deleteShell(req, res) {
+  deleteShell = async (req, res) => {
     const { user_id } = req.user
     const { shell_id } = req.params
-    const { confirm_password } = req.body
+    const { confirm_password } = req.query
 
     if (!user_id || !shell_id) return res.status(400).send('Missing user or shell id.')
     if (!confirm_password) return res.status(400).send('Missing confirm password.')
 
-    const client = await pool.connect()
     try {
-      const userFound = await UserModel.findUserById({ user_id })
+      const userFound = await this.userModel.findUserById({ user_id })
       if (userFound.error) {
         return res.status(500).send('Failed to fetch user')
       }
       const isMatches = bcrypt.compare(confirm_password, userFound.user.user_password)
       if (!isMatches) return res.status(400).send('Invalid confirm password.')
 
-      const shellFound = await ShellModel.getShellById({ shell_id, user_id })
+      const shellFound = await this.shellModel.getShellById({ shell_id, user_id })
       if (shellFound.error) {
         return res.status(500).send('Failed to fetch shell')
       }
       if (!shellFound.shell) return res.status(404).send('Shell not found')
+
+      const { states } = await this.stateModel.getStatesById({ shell_id, user_id })
+      if (states && states.length > 0) {
+        for (const state of states) {
+          if (state.state_public_id) {
+            await deleteRawFromCloud(state.state_public_id)
+          }
+        }
+      }
 
       const { shell_cover_public_id, shell_rom_public_id } = shellFound.shell
 
@@ -175,7 +187,7 @@ export class ShellController {
       if (shell_rom_public_id) {
         await deleteRawFromCloud(shell_rom_public_id)
       }
-      const deleteShell = await ShellModel.deleteShellById({ shell_id, user_id })
+      const deleteShell = await this.shellModel.deleteShellById({ shell_id, user_id })
 
       if (deleteShell.error) {
         return res.status(500).send('Failed to delete shell')
@@ -184,8 +196,6 @@ export class ShellController {
     } catch (err) {
       console.error('Error deleting shell:', err)
       return res.status(500).send('Internal Server Error, Please try again')
-    } finally {
-      if (client) client.release()
     }
   }
 }

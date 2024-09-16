@@ -1,7 +1,6 @@
 import { configDotenv } from 'dotenv'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
-import { UserModel } from '../models/postgreRender/user.js'
 import { validateUser } from '../schemas/userSchema.js'
 import {
   createLoginUser,
@@ -12,13 +11,17 @@ import {
   registerUserSession,
 } from '../utils/userUtil.js'
 import { cookieOptions } from '../../config.js'
-import { SessionModel } from '../models/postgreRender/sessions.js'
-import { gSessionTempId } from '../models/postgreRender/gSessionTempId.js'
 
 configDotenv()
 
 export class UserController {
-  static async register(req, res) {
+  constructor({ userModel, sessionModel, googleIdModel }) {
+    this.userModel = userModel
+    this.sessionModel = sessionModel
+    this.googleIdModel = googleIdModel
+  }
+
+  register = async (req, res) => {
     const input = createUser(req.body)
 
     try {
@@ -27,7 +30,7 @@ export class UserController {
       if (!response.success)
         return res.status(400).send({ error: response.error.issues[0].message })
 
-      const userExists = await UserModel.checkUserExists({ user: input })
+      const userExists = await this.userModel.checkUserExists({ user: input })
 
       if (userExists.error)
         return res.status(500).send({ error: 'Internal Server Error, Please try again' })
@@ -36,7 +39,7 @@ export class UserController {
 
       const passwordHash = await bcrypt.hash(input.user_password, 10)
       const user = createUser({ ...input, user_password: passwordHash })
-      const newUser = await UserModel.registerUser({ user }) // WITH PASSWORD ❗❗ NO RETURN VALUE TO THE CLIENT
+      const newUser = await this.userModel.registerUser({ user }) // WITH PASSWORD ❗❗ NO RETURN VALUE TO THE CLIENT
 
       if (newUser.error)
         return res.status(500).send({ error: 'Internal Server Error, Please try again' })
@@ -47,6 +50,7 @@ export class UserController {
       const session = await registerUserSession({
         token: newUserToken,
         user: userTokenSchema,
+        sessionModel: this.sessionModel,
         req,
       })
 
@@ -63,14 +67,14 @@ export class UserController {
     }
   }
 
-  static async login(req, res) {
+  login = async (req, res) => {
     const input = createLoginUser(req.body)
 
     if (!input.user || !input.user_password)
       return res.status(400).send({ error: 'Missing user or password' })
 
     try {
-      const userFound = await UserModel.findUserByIdOrEmail({ user: input })
+      const userFound = await this.userModel.findUserByIdOrEmail({ user: input })
 
       if (userFound.error)
         return res.status(500).send({ error: 'Internal Server Error, Please try again' })
@@ -86,6 +90,7 @@ export class UserController {
 
       const session = await registerUserSession({
         token: newUserToken,
+        sessionModel: this.sessionModel,
         user: userTokenSchema,
         req,
       })
@@ -100,11 +105,11 @@ export class UserController {
     }
   }
 
-  static async googleLogin(req, res) {
+  googleLogin = async (req, res) => {
     const googleUser = req.user
 
     try {
-      const userFound = await UserModel.findUserByIdOrEmail({
+      const userFound = await this.userModel.findUserByIdOrEmail({
         user: { user: googleUser.user_email },
       })
 
@@ -128,6 +133,7 @@ export class UserController {
 
       const session = await registerUserSession({
         token: newUserToken,
+        sessionModel: this.sessionModel,
         user: userTokenSchema,
         req,
       })
@@ -137,7 +143,7 @@ export class UserController {
           `${process.env.ORIGIN_URL}/login?error=Internal Server Error, Please try again`
         )
 
-      const tempId = await gSessionTempId.createId({ session_id: session.session_id })
+      const tempId = await this.googleIdModel.createId({ session_id: session.session_id })
       if (tempId.error) {
         return res.redirect(
           `${process.env.ORIGIN_URL}/register?error=Internal Server Error, Please try again`
@@ -153,11 +159,11 @@ export class UserController {
     }
   }
 
-  static async googleRegister(req, res) {
+  googleRegister = async (req, res) => {
     const googleUser = req.user
 
     try {
-      const userExists = await UserModel.findUserByIdOrEmail({
+      const userExists = await this.userModel.findUserByIdOrEmail({
         user: { user: googleUser.user_email },
       })
       if (userExists.error)
@@ -183,7 +189,7 @@ export class UserController {
         is_google_user: true,
       }
 
-      const newUser = await UserModel.registerUser({ user })
+      const newUser = await this.userModel.registerUser({ user })
 
       if (newUser.error)
         return res.redirect(
@@ -194,6 +200,7 @@ export class UserController {
       const newUserToken = jwt.sign(userTokenSchema, process.env.JWT_SECRET_KEY)
 
       const session = await registerUserSession({
+        sessionModel: this.sessionModel,
         token: newUserToken,
         user: newUser.user,
         req,
@@ -203,7 +210,7 @@ export class UserController {
           `${process.env.ORIGIN_URL}/register?error=Internal server error, please try again`
         )
 
-      const tempId = await gSessionTempId.createId({ session_id: session.session_id })
+      const tempId = await this.googleIdModel.createId({ session_id: session.session_id })
       if (tempId.error) {
         return res.redirect(
           `${process.env.ORIGIN_URL}/register?error=Internal Server Error, Please try again`
@@ -219,26 +226,26 @@ export class UserController {
     }
   }
 
-  static async googleVerify(req, res) {
+  googleVerify = async (req, res) => {
     const { temp_id } = req.params
-    const token = await gSessionTempId.getTokenByTempId({ temp_id })
+    const token = await this.googleIdModel.getTokenByTempId({ temp_id })
     if (token.error) return res.redirect(`${process.env.ORIGIN_URL}`)
-    await gSessionTempId.deleteId({ temp_id })
+    await this.googleIdModel.deleteId({ temp_id })
     res.cookie('auth', token.token, cookieOptions).sendStatus(200)
   }
 
-  static async logout(req, res) {
+  logout = async (req, res) => {
     const { auth } = req.cookies
 
     if (!auth) return res.status(200).send('User is not logging in.')
 
     try {
-      const sessionFound = await SessionModel.findSessionByToken({
+      const sessionFound = await this.sessionModel.findSessionByToken({
         token: auth,
       })
       if (!sessionFound.session) return res.status(200).send('User is not logged in.')
 
-      await SessionModel.deleteSessionByToken({ token: auth })
+      await this.sessionModel.deleteSessionByToken({ token: auth })
 
       return res.cookie('auth', '', cookieOptions).send('User successfully logged out')
     } catch (err) {
@@ -247,7 +254,7 @@ export class UserController {
     }
   }
 
-  static async verify(req, res) {
+  verify = async (req, res) => {
     const { auth } = req.cookies
 
     if (!auth) return res.status(401).send('Unauthorized')
@@ -256,10 +263,10 @@ export class UserController {
       const decodedToken = jwt.verify(auth, process.env.JWT_SECRET_KEY)
       const { user_id } = decodedToken
 
-      const sessionFound = await SessionModel.findSessionByToken({ token: auth })
+      const sessionFound = await this.sessionModel.findSessionByToken({ token: auth })
       if (!sessionFound?.session) return res.status(403).send('Unauthorized')
 
-      const userFound = await UserModel.findUserById({ user_id })
+      const userFound = await this.userModel.findUserById({ user_id })
       if (!userFound?.user) return res.status(403).send('User not found')
 
       const user = {
@@ -275,13 +282,13 @@ export class UserController {
     }
   }
 
-  static async profile(req, res) {
+  profile = async (req, res) => {
     const { user_id } = req.user
 
     if (!user_id) return res.status(400).send('User not found')
 
     try {
-      const userFound = await UserModel.findUserById({ user_id })
+      const userFound = await this.userModel.findUserById({ user_id })
       if (!userFound?.user) {
         return res.status(404).send('User not found')
       }

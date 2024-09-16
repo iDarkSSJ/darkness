@@ -147,6 +147,37 @@ form button[type="submit"]:hover {
   background-color: #45a049;
 }
 
+form button.btnDisabled {
+  background-color: #333333;
+  color: #9e9e9e;
+}
+
+form button.btnDisabled:hover {
+  background-color: #333333;
+}
+
+.shellOptions {
+  display: flex;
+  gap: 10px;
+}
+
+.shellOptions>button {
+  width: 40px;
+  height: 40px;
+  transition: all 300ms ease;
+  background-color: #0000;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.shellOptions>button:hover {
+  background-color: #555555;
+}
+
+
+
 .loginCard span {
   display: block;
   margin: 10px 0;
@@ -887,16 +918,64 @@ input[type='file'] {
   justify-content: space-between;
 }
 
-.shellHeader>div {
+.shellHeader>div,
+.autosaveInfo {
   display: flex;
   gap: 1rem;
-  align-content: center;
+  align-items: center;
+  justify-content: center;
 }
 
 .navContainer h1 strong {
   color: #69f;
   user-select: none;
 }
+
+.input-mapping {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  max-width: 600px;
+  margin: auto;
+  background-color: #2e2e2e;
+}
+
+.input-mapping div {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.input-mapping img {
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+}
+
+.input-mapping span {
+  margin: 0 8px;
+}
+
+.input-mapping div span {
+  color: #bb86fc;
+}
+
+
+
+@media (max-width: 600px) {
+  .input-mapping {
+    padding: 15px;
+  }
+
+  .input-mapping img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 
 
 @keyframes spinIcon {

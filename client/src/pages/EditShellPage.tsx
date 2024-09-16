@@ -1,48 +1,74 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import {
   ACCEPTED_COVER_EXTENSIONS,
-  ACCEPTED_ROM_EXTENSIONS,
   APIError,
   CoverExtension,
-  EXTENSION_TO_CORE,
-  RomExtension,
-  ShellData,
 } from "../types/types.d"
-import { useNavigate } from "react-router-dom"
-import { addShellRequest } from "../api/shells"
+import { useNavigate, useParams } from "react-router-dom"
+import { updateShellRequest, getSingleShellRequest } from "../api/shells"
 import Loader from "../components/icons/Loader"
 import { uploadToCloudinary } from "../utils/utils"
-import JSZip from "jszip"
 
-function CreateShellPage() {
+function EditShellPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const navigate = useNavigate()
   const [errors, setErrors] = useState<string | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [isFormChanged, setIsFormChanged] = useState(false)
+  const { shell_id } = useParams()
+  const navigate = useNavigate()
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors: formErrors },
   } = useForm()
+
+  useEffect(() => {
+    const fetchShellData = async () => {
+      try {
+        const response = await getSingleShellRequest(shell_id)
+        if (response.status === 200) {
+          const shellData = response.data
+          setValue("shell_name", shellData.shell_name)
+          setCoverPreview(shellData.shell_cover_url)
+        } else {
+          setErrors("Failed to fetch shell data.")
+        }
+      } catch (err) {
+        console.error("Error fetching shell data:", err)
+        setErrors("Error fetching shell data.")
+      }
+    }
+
+    if (shell_id) {
+      fetchShellData()
+    }
+  }, [shell_id, setValue])
 
   const getFileExtension = (filename: string) => {
     return filename.split(".").pop()?.toLowerCase() || ""
   }
 
-  const reqNewShell = async (data: ShellData) => {
+  const reqUpdateShell = async (data: {
+    shell_id: string
+    shell_name: string
+    shell_cover_url: string
+    shell_cover_public_id: string
+  }) => {
     try {
-      const response = await addShellRequest(data)
+      const response = await updateShellRequest(data)
       if (response.status === 200) {
         setIsLoading(false)
         navigate("/shells")
       } else {
         setIsLoading(false)
-        setErrors("Failed to create new shell.")
+        setErrors("Failed to update shell.")
       }
     } catch (err) {
       setIsLoading(false)
-      console.error("Error creating new shell:", err)
+      console.error("Error updating shell:", err)
       const error = err as APIError
       setErrors(error.response?.data?.error ?? "Error")
     }
@@ -51,9 +77,7 @@ function CreateShellPage() {
   const handleOnSubmit = handleSubmit(async (data) => {
     setIsLoading(true)
     setErrors(null)
-    const { shell_name, shell_cover, shell_rom } = data
-
-    const romFileExtension = getFileExtension(shell_rom[0].name) as RomExtension
+    const { shell_name, shell_cover } = data
 
     if (shell_cover[0]) {
       const coverFileExtension = getFileExtension(
@@ -64,60 +88,24 @@ function CreateShellPage() {
         return
       }
     }
-    if (!ACCEPTED_ROM_EXTENSIONS.includes(romFileExtension)) {
-      setErrors("Invalid ROM file extension.")
-      return
-    }
-
-    const shell_core = EXTENSION_TO_CORE[romFileExtension]
 
     try {
-      const zip = new JSZip()
-      zip.file(crypto.randomUUID(), shell_rom[0], {
-        compression: "DEFLATE",
-        compressionOptions: { level: 9 },
-      })
-      const zipBlob = await zip.generateAsync({
-        type: "blob",
-        compression: "DEFLATE",
-        compressionOptions: { level: 9 },
-      })
-
-      const zipFile = new File([zipBlob], `${crypto.randomUUID()}`, {
-        type: zipBlob.type,
-      })
-
-      const romUploadResult = await uploadToCloudinary(zipFile, "raw")
-
       let coverUploadResult = null
       if (shell_cover[0]) {
-        const originalFile = shell_cover[0]
-
-        const renamedFile = new File(
-          [originalFile],
-          `${crypto.randomUUID()}.jpg`,
-          {
-            type: originalFile.type,
-            lastModified: originalFile.lastModified,
-          }
-        )
-
-        coverUploadResult = await uploadToCloudinary(renamedFile, "image")
+        coverUploadResult = await uploadToCloudinary(shell_cover[0], "image")
       }
 
       const body = {
+        shell_id: shell_id || "",
         shell_name: shell_name,
-        shell_core: shell_core,
-        shell_rom_url: romUploadResult.secure_url,
-        shell_rom_public_id: romUploadResult.public_id,
         shell_cover_url: coverUploadResult?.secure_url,
         shell_cover_public_id: coverUploadResult?.public_id,
       }
 
-      await reqNewShell(body)
+      await reqUpdateShell(body)
     } catch (err) {
       setIsLoading(false)
-      console.error("Error during shell creation: ", err)
+      console.error("Error during shell update: ", err)
     }
   })
 
@@ -127,12 +115,17 @@ function CreateShellPage() {
       const coverPreviewUrl = URL.createObjectURL(coverFile)
       setCoverPreview(coverPreviewUrl)
     }
+    setIsFormChanged(true)
+  }
+
+  const handleInputChange = () => {
+    setIsFormChanged(true)
   }
 
   return (
     <main>
       <div>
-        <h2>Create Shell</h2>
+        <h2>Edit Shell</h2>
         <form className="shellForm" onSubmit={handleOnSubmit}>
           <div>
             <label htmlFor="shellName">Name</label>
@@ -145,6 +138,7 @@ function CreateShellPage() {
                 minLength: 3,
                 maxLength: 30,
               })}
+              onChange={handleInputChange}
             />
             {formErrors.shell_name && (
               <span className="error">
@@ -175,40 +169,18 @@ function CreateShellPage() {
               <span className="error">Invalid file type.</span>
             )}
           </div>
-          <div>
-            <label className="label" htmlFor="shellRom">
-              ROM
-            </label>
-            <input
-              className="input-file"
-              id="shellRom"
-              type="file"
-              accept=".nes,.snes,.gb,.gba,.gbc,.sfc,.smc,.bin,.md,.gen,smd"
-              {...register("shell_rom", {
-                required: true,
-              })}
-            />
-            {formErrors.shell_rom && (
-              <span className="error">Invalid Rom.</span>
-            )}
-          </div>
           {errors && <span className="error">{errors}</span>}
-          {!isLoading && <button type="submit">Create Shell</button>}
+          <button
+            className={isFormChanged ? "btnn" : "btnDisabled"}
+            type="submit"
+            disabled={!isFormChanged || isLoading}>
+            Update Shell
+          </button>
           {isLoading && <Loader />}
         </form>
-        <footer>
-          <p>
-            We accept files with the following extensions:
-            <strong>
-              .nes, .snes, .gb, .gba, .gbc, .sfc, .smc, .bin, .md, .gen, .smd
-            </strong>
-            This includes games for Game Boy, Game Boy Color, Game Boy Advance,
-            Mega Drive, NES and SNES.
-          </p>
-        </footer>
       </div>
     </main>
   )
 }
 
-export default CreateShellPage
+export default EditShellPage

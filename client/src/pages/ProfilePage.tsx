@@ -23,6 +23,7 @@ function ProfilePage() {
             ? sessions?.filter((session) => session.session_id !== session_id)
             : sessions
         )
+        window.location.reload()
       }
     } catch (err) {
       console.error("Failed to delete session", err)
