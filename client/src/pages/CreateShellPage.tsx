@@ -11,6 +11,7 @@ import {
 import { useNavigate } from "react-router-dom"
 import { addShellRequest } from "../api/shells"
 import Loader from "../components/icons/Loader"
+import { uploadToCloudinary } from "../utils/utils"
 import JSZip from "jszip"
 
 function CreateShellPage() {
@@ -71,20 +72,34 @@ function CreateShellPage() {
 
     try {
       const zip = new JSZip()
-      zip.file(crypto.randomUUID(), shell_rom[0])
+      zip.file(shell_rom[0].name, shell_rom[0], {
+        compression: "DEFLATE",
+        compressionOptions: { level: 9 },
+      })
+      const zipBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 9 },
+      })
 
-      const compressedRom = await zip.generateAsync({ type: "blob" })
+      const romUploadResult = await uploadToCloudinary(zipBlob, "raw")
+
+      let coverUploadResult = null
+      if (shell_cover[0]) {
+        coverUploadResult = await uploadToCloudinary(shell_cover[0], "image")
+      }
 
       const formData = new FormData()
-
       formData.append("shell_name", shell_name)
-      if (shell_cover[0]) {
-        formData.append("shell_cover", shell_cover[0])
-      }
-      formData.append("shell_rom", compressedRom, `${shell_name}.zip`)
       formData.append("shell_core", shell_core)
+      formData.append("shell_rom_url", romUploadResult.secure_url)
+      formData.append("shell_rom_public_id", romUploadResult.public_id)
+      if (coverUploadResult) {
+        formData.append("shell_cover_url", coverUploadResult.secure_url)
+        formData.append("shell_cover_public_id", coverUploadResult.public_id)
+      }
 
-      reqNewShell(formData)
+      await reqNewShell(formData)
     } catch (err) {
       setIsLoading(false)
       console.error("Error during shell creation: ", err)

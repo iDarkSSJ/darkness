@@ -11,6 +11,7 @@ import { multerErrors } from './config/multerConfig.js'
 import { authRequired } from './middlewares/validateToken.js'
 import stateRouter from './routes/stateRouter.js'
 import { configDotenv } from 'dotenv'
+import uploadRouter from './routes/uploadRouter.js'
 
 configDotenv()
 
@@ -35,6 +36,7 @@ app.disable('x-powered-by')
 app.use('/api', authRouter)
 app.use('/api', authRequired, shellRouter)
 app.use('/api', authRequired, stateRouter)
+app.use('/api', uploadRouter)
 
 // -----------ERROR HANDLING 🐛---------------
 app.use(multerErrors)

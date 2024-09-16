@@ -9,45 +9,40 @@ import { ShellModel } from '../models/postgreRender/shellModel.js'
 import { UserModel } from '../models/postgreRender/user.js'
 import { validateShell } from '../schemas/shellSchema.js'
 
-const MAX_ROM_SIZE = 32 * 1024 * 1024
-
 export class ShellController {
   static async createShell(req, res) {
     const { user_id } = req.user
-    const { shell_name, shell_core } = req.body
-    const { shell_rom, shell_cover } = req.files
+    const {
+      shell_name,
+      shell_core,
+      shell_rom_url,
+      shell_rom_public_id,
+      shell_cover_url,
+      shell_cover_public_id,
+    } = req.body
 
-    if (!shell_rom) return res.status(400).send({ error: 'ROM file is required.' })
+    if (!shell_rom_url || !shell_rom_public_id) {
+      return res.status(400).send({ error: 'Error fetching cover or rom.' })
+    }
 
     const inputsAccepted = validateShell({ shell_name, shell_core })
-    if (!inputsAccepted.success) return res.status(400).send({ error: 'Invalid shell data.' })
-
-    const romFile = shell_rom[0]
-
-    if (romFile.size > MAX_ROM_SIZE) {
-      return res.status(400).send({ error: 'Maximum ROM size exceeded.' })
+    if (!inputsAccepted.success) {
+      return res.status(400).send({ error: 'Invalid shell data.' })
     }
 
     try {
       let coverUrl = null
       let coverPublicId = null
-
-      if (shell_cover) {
-        const coverFile = shell_cover[0]
-        const coverUploadResponse = await uploadToCloud(coverFile.buffer, 'covers')
-        coverUrl = coverUploadResponse.secure_url
-        coverPublicId = coverUploadResponse.public_id
+      if (shell_cover_url && shell_cover_public_id) {
+        coverUrl = shell_cover_url
+        coverPublicId = shell_cover_public_id
       }
-      // const zipBuffer = await compressToZipInMemory(romFile.buffer)
-      // now the frontend compresses the file
-
-      const romUploadResult = await uploadToCloud(romFile.buffer, 'roms', 'raw')
 
       const shellSchema = {
         shell_name,
         shell_core,
-        shell_rom_url: romUploadResult.secure_url,
-        shell_rom_public_id: romUploadResult.public_id,
+        shell_rom_url,
+        shell_rom_public_id,
         shell_cover_url: coverUrl,
         shell_cover_public_id: coverPublicId,
       }
@@ -58,8 +53,6 @@ export class ShellController {
       })
 
       if (newShell.error) {
-        await deleteRawFromCloud(romUploadResult.public_id)
-        await deleteImageFromCloud(coverPublicId)
         return res.status(400).send({ error: 'Failed to create shell' })
       }
 
